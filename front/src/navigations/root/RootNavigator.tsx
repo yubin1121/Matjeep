@@ -1,6 +1,6 @@
 import AuthStackNavigator from "../stack/AuthStackNavigator";
 import MainDrawerNavigator from "../drawer/MainDrawerNavigator";
-import MainTabNavigator from "../drawer/MainTabNavigator";
+import MainTabNavigator from "../bottomtab/MainTabNavigator";
 import useAuth from '@/hooks/queries/useAuth'
 import { useEffect } from "react";
 

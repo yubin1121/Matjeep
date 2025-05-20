@@ -1,6 +1,8 @@
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import FeedHomeScreen from '@/screens/feed/FeedHomeScreen';
 import CalendarHomeScreen from '@/screens/calendar/CalendarHomeScreen';
+import MyHomeScreen from '@/screens/my/MyHomeScreen';
+import AddPostScreen from '@/screens/map/AddPostScreen'
 import MapStackNavigator, { MapStackParamList } from '../stack/MapStackNavigator';
 import { colors, mainNavigations } from '@/constants';
 import { NavigatorScreenParams, RouteProp } from '@react-navigation/native';
@@ -11,6 +13,7 @@ export type MainTabParamList = {
     [mainNavigations.FEED] : undefined;
     [mainNavigations.CALENDAR] : undefined;
     [mainNavigations.MY] : undefined;
+    [mainNavigations.POST] : undefined;
 }
 
 function BottomTabIcons(route: RouteProp<MainTabParamList>, focused: boolean, color: string){
@@ -21,6 +24,7 @@ function BottomTabIcons(route: RouteProp<MainTabParamList>, focused: boolean, co
         case mainNavigations.FEED: iconName = 'apps'; break;
         case mainNavigations.CALENDAR: iconName = 'view-module'; break;
         case mainNavigations.MY: iconName = 'settings'; break;
+        case mainNavigations.POST: iconName = 'map'; break;
     }
 
     return <MaterialIcons name={iconName} size={24} color={color} />;
@@ -49,9 +53,6 @@ function MainTabNavigator() {
             <Tab.Screen
                 name= {mainNavigations.HOME}
                 component={MapStackNavigator}
-                options={{
-                    title: '지도',
-                }}
             />
             <Tab.Screen
                 name= {mainNavigations.FEED}
@@ -62,7 +63,7 @@ function MainTabNavigator() {
             />
             <Tab.Screen
                 name= {mainNavigations.MY}
-                component={CalendarHomeScreen}
+                component={MyHomeScreen}
                 options={{ 
                     title: 'MY',
                 }}

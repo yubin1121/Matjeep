@@ -20,6 +20,9 @@ const colors = {
     GRAY_500 : '#8E8E8E',
     GRAY_400 : '#DFDFDF' ,
     GRAY_100 : '#F8F8F8',
+    GRAY_200: '#E7E7E7',
+    GRAY_300: '#D8D8D8',
+    GRAY_700: '#575757',
     RED_300 : '#FFB4B4' ,
     RED_500 : '#FF5F5F'
 }

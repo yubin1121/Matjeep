@@ -1,79 +1,114 @@
-import React, { ForwardedRef, forwardRef, useRef } from 'react';
-import {StyleSheet, View, Text, Dimensions, TextInputProps} from 'react-native';
-import { colors } from '../constants';
-import { Pressable, TextInput } from 'react-native-gesture-handler';
-import { mergeRefs } from '../utils';
+import React, {ForwardedRef, ReactNode, forwardRef, useRef} from 'react';
+import {
+  Dimensions,
+  StyleSheet,
+  TextInput,
+  View,
+  TextInputProps,
+  Text,
+  Pressable,
+} from 'react-native';
+
+import {mergeRefs} from '@/utils';
+import {colors} from '@/constants';
 
 interface InputFieldProps extends TextInputProps {
-    disabled ?: boolean;
-    error ?: string;
-    touched ?: boolean;
+  disabled?: boolean;
+  error?: string;
+  touched?: boolean;
+  icon?: ReactNode;
+  rightIcon?: ReactNode; // 추가!
 }
 
 const deviceHeight = Dimensions.get('screen').height;
 
-const InputField = forwardRef(({
-    disabled = false,
-    error,
-    touched, 
-    ...props
-
+const InputField = forwardRef(
+  (
+    {
+      disabled = false,
+      error,
+      touched,
+      icon = null,
+      rightIcon = null, // 추가!
+      ...props
     }: InputFieldProps,
     ref?: ForwardedRef<TextInput>,
-    
-    ) => {
-    
-        const innerRef = useRef<TextInput | null > (null);
-        const handlePressInput =  () => {
-        innerRef.current?.focus();
-    
+  ) => {
+    const innerRef = useRef<TextInput | null>(null);
+
+    const handlePressInput = () => {
+      innerRef.current?.focus();
     };
-  
+
     return (
-    <Pressable onPress={handlePressInput}>
-        <View style={[styles.container , 
-                      disabled && styles.disabled, 
-                      touched && Boolean(error) && styles.inputError]}>
-            <TextInput 
-                ref = {ref? mergeRefs(innerRef, ref) : innerRef }
-                editable = {!disabled}
-                placeholderTextColor={colors.GRAY_600}
-                style=  {[styles.input , disabled && styles.disabled]}
-                autoCapitalize="none"
-                spellCheck = {false}
-                autoCorrect = {false}
-                {...props}
+      <Pressable onPress={handlePressInput}>
+        <View
+          style={[
+            styles.container,
+            disabled && styles.disabled,
+            props.multiline && styles.multiLine,
+            touched && Boolean(error) && styles.inputError,
+          ]}>
+          <View style={styles.inputRow}>
+            {icon}
+            <TextInput
+              ref={ref ? mergeRefs(innerRef, ref) : innerRef}
+              editable={!disabled}
+              placeholderTextColor={colors.GRAY_500}
+              style={[styles.input, disabled && styles.disabled]}
+              autoCapitalize="none"
+              spellCheck={false}
+              autoCorrect={false}
+              {...props}
             />
-            { touched && Boolean(error) && <Text style={styles.error}>{error} </Text> }
+            {rightIcon && (
+              <View style={styles.rightIcon}>{rightIcon}</View>
+            )}
+          </View>
+          {touched && Boolean(error) && (
+            <Text style={styles.error}>{error}</Text>
+          )}
         </View>
-    </Pressable>
-  )
-});
+      </Pressable>
+    );
+  },
+);
 
 const styles = StyleSheet.create({
-    container:{
-        borderWidth:1,
-        borderColor: colors.GRAY_400,
-        padding:deviceHeight > 700 ? 15 : 10 ,
-    },
-    input: {
-        fontSize:16,
-        color: colors.BLACK,
-        padding: 0,
-    },
-    disabled: {
-        backgroundColor : colors.GRAY_400,
-        color : colors.GRAY_800,
-    },
-    inputError: {
-        borderWidth: 1,
-        borderColor : colors.RED_500,
-    },
-    error: {
-        color: colors.RED_500,
-        fontSize : 12,
-        paddingTop : 5,
-    }
+  container: {
+    borderWidth: 1,
+    borderColor: colors.GRAY_200,
+    padding: deviceHeight > 700 ? 15 : 10,
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  multiLine: {
+    paddingBottom: deviceHeight > 700 ? 45 : 30,
+  },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    color: colors.BLACK,
+    padding: 0,
+  },
+  rightIcon: {
+    marginLeft: 8,
+  },
+  disabled: {
+    backgroundColor: colors.GRAY_200,
+    color: colors.GRAY_700,
+  },
+  inputError: {
+    borderWidth: 1,
+    borderColor: colors.RED_300,
+  },
+  error: {
+    color: colors.RED_500,
+    fontSize: 12,
+    paddingTop: 5,
+  },
 });
 
 export default InputField;

@@ -87,10 +87,16 @@ function useLogout(mutationOptions?: UseMutationCustomOptions){
 	return useMutation({
 		mutationFn: logout,
 		onSuccess:() => {
+
+            console.log('로그아웃 성공!');
 			removeHeader('Authorization');
             removeEncryptStorage(storageKeys.REFRESH_TOKEN);
 		},
+        onError: (err) => {
+            console.log('로그아웃 실패:', err);
+        },
 		onSettled: ()=>{
+			console.log('로그아웃 완료!');
 			queryClient.invalidateQueries({queryKey: [queryKeys.AUTH]}); 
 		},
 		...mutationOptions

@@ -1,137 +1,150 @@
-import React, { useRef, useState } from 'react';
-import {StyleSheet, View, Text, Pressable} from 'react-native';
-import useAuth from '@/hooks/queries/useAuth';
-import MapView, {PROVIDER_GOOGLE, LatLng, Marker, LongPressEvent, Callout} from 'react-native-maps';
-import { CompositeNavigationProp, useNavigation } from '@react-navigation/native';
-import { StackNavigationProp } from '@react-navigation/stack';
-import { MapStackParamList } from '@/navigations/stack/MapStackNavigator';
-import { DrawerNavigationProp } from '@react-navigation/drawer';
-import { MainTabParamList } from '@/navigations/drawer/MainTabNavigator';
+import React, { useRef, useState, useMemo, useCallback } from 'react';
+import { StyleSheet, View, Text, Pressable, Alert } from 'react-native';
+import MapView, { PROVIDER_GOOGLE, LatLng, Marker } from 'react-native-maps';
+import BottomSheet from '@gorhom/bottom-sheet';
+import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
+import { useNavigation } from '@react-navigation/native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { SafeAreaProvider, SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
-import { colors } from '@/constants';
+import { colors, mapNavigations, alerts } from '@/constants';
+import CustomMarker from '@/components/CustomMarker';
+import useAuth from '@/hooks/queries/useAuth';
 import useUserLocation from '@/hooks/useUserLocation';
 import usePermission from '@/hooks/usePermission';
-
-import Ionicons from 'react-native-vector-icons/Ionicons';
-import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import mapStyle from '@/style/mapStyle';
-import CustomMarker from '@/components/CustomMarker';
-
-type Navigation = CompositeNavigationProp<
-  StackNavigationProp<MapStackParamList>,
-  DrawerNavigationProp<MainTabParamList>
->;
-
-// 1. 나의 위치를 구하고,
-// 2. 지도를 그 곳으로 이동
+import useGetMarkers from '@/hooks/queries/useGetMarkers';
 
 function MapHomeScreen() {
-
-  const {logoutMutation} = useAuth();
+  const { logoutMutation } = useAuth();
   const inset = useSafeAreaInsets();
-  console.log('inset:', inset);
-  const navigation = useNavigation<Navigation>();
+  const navigation = useNavigation();
   const mapRef = useRef<MapView | null>(null);
-  const {userLocation, isUserLocationError} = useUserLocation();
+  const { userLocation, isUserLocationError } = useUserLocation();
   const [selectLocation, setSelectLocation] = useState<LatLng | null>(null);
-
+  const { data: markers = [] } = useGetMarkers();
 
   usePermission('LOCATION');
 
-  const handleLogout = () => {
-    logoutMutation.mutate(null);
-  }
+  // 바텀시트
+  const bottomSheetRef = useRef<BottomSheet>(null);
+  const snapPoints = useMemo(() => ['25%'], []);
 
-  const handlePressUserLocation = () =>{
-    if(isUserLocationError){
-      //에러메시지를 표시하기
-      return;
+  const handlePressAddPost = () => {
+    if (!selectLocation) {
+      return Alert.alert(
+        alerts.NOT_SELECTED_LOCATION.TITLE,
+        alerts.NOT_SELECTED_LOCATION.DESCRIPTION,
+      );
     }
-    //console.log('latitude, longitude', userLocation.latitude, userLocation.longitude);
+    navigation.navigate(mapNavigations.ADD_POST, {
+      location: selectLocation,
+    });
+    setSelectLocation(null);
+    bottomSheetRef.current?.close();
+  };
+
+  const handlePressUserLocation = () => {
+    if (isUserLocationError) return;
     mapRef.current?.animateToRegion({
       latitude: userLocation.latitude,
-      longitude:userLocation.longitude,
+      longitude: userLocation.longitude,
       latitudeDelta: 0.0922,
       longitudeDelta: 0.0421,
     });
   };
-	
-  const handleLongPressMapView = ({ nativeEvent }: LongPressEvent) => {
+
+  // 지도 롱프레스 → 위치 선택 + 바텀시트 오픈
+  const handleLongPressMapView = ({ nativeEvent }: { nativeEvent: any }) => {
     setSelectLocation(nativeEvent.coordinate);
+    console.log('롱프레스 위치:', nativeEvent.coordinate);
+    bottomSheetRef.current?.expand();
   };
 
+  // 지도 탭(클릭)으로 바꾸고 싶으면 onPress로 바꿔도 됩니다.
 
   return (
-  <SafeAreaView style = {styles.container}  edges={['right', 'left', 'top']}>
-    <MapView 
-       style = {styles.mapContainer} 
-       provider={PROVIDER_GOOGLE} 
-       showsUserLocation
-       followsUserLocation
-       showsMyLocationButton={false}
-       ref={mapRef}
-       customMapStyle={mapStyle}
-       onLongPress={handleLongPressMapView}
-     >
-      <CustomMarker 
-        color='RED'
-        coordinate={{
-        latitude: 37.5516032365118,
-        longitude: 126.98989626020192,}}
-        />
-      <CustomMarker 
-        color='BLUE'
-        coordinate={{
-        latitude: 37.5616032365118,
-        longitude: 126.98989626020192,}}
-        />
+    <SafeAreaView style={styles.container} edges={['right', 'left', 'top']}>
+      <MapView
+        ref={mapRef}
+        style={styles.container}
+        provider={PROVIDER_GOOGLE}
+        showsUserLocation
+        followsUserLocation
+        showsMyLocationButton={false}
+        onLongPress={handleLongPressMapView}
+        region={{
+          ...userLocation,
+          latitudeDelta: 0.0922,
+          longitudeDelta: 0.0421,
+        }}>
+      
+        {markers.map(({ id, color, score, ...coordinate }) => (
+          <CustomMarker
+            key={id}
+            color={color}
+            score={score}
+            coordinate={coordinate}
+          />
+        ))}
+        {selectLocation && (
+          <Marker coordinate={selectLocation} />
+        )}
+      </MapView>
 
-      {selectLocation && (
-        <Marker coordinate={selectLocation}>
-        <Callout>
-          <Text>선택한 위치입니다</Text>
-        </Callout>
-        </Marker>
-      )}
-     </MapView>
+      {/* 기존 버튼 */}
+      <View style={[styles.buttonList, { bottom: inset.bottom + 80 }]}>
+        <Pressable style={styles.mapButton} onPress={handlePressUserLocation}>
+          <MaterialIcons name="my-location" color={colors.WHITE} size={25} />
+        </Pressable>
+      </View>
 
-     <View style={[styles.buttonList, { bottom: inset.bottom + 80 }]}>
-      <Pressable style = {styles.mapButton} onPress={handlePressUserLocation}>
-        <MaterialIcons name = 'my-location' color={colors.WHITE} size= {25}/>
-      </Pressable>
-    </View>
-  </SafeAreaView>
+      {/* 바텀시트: 위치 선택 후 노출 */}
+      <BottomSheet
+        ref={bottomSheetRef}
+        index={-1}
+        snapPoints={snapPoints}
+        enablePanDownToClose={true}
+      >
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+          <Text style={{ marginBottom: 10 }}>
+            {selectLocation
+              ? `선택한 위치: ${selectLocation.latitude}, ${selectLocation.longitude}`
+              : '위치를 선택해 주세요.'}
+          </Text>
+          <Pressable style={styles.addButton} onPress={handlePressAddPost}>
+            <Text style={{ color: colors.WHITE, fontWeight: 'bold' }}>다음 화면으로</Text>
+          </Pressable>
+        </View>
+      </BottomSheet>
+    </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-
-  container:{
-    flex:1,
-  },
-  mapContainer:{
-    flex : 1
-  },
-  buttonList:{
-    position : 'absolute',
-    bottom: 30,
-    right : 15,
-  },
-  mapButton:{
-    backgroundColor : colors.ORANGE_800,
-    marginVertical : 5,
-    height : 48,
-    width : 48,
+  container: { flex: 1 },
+  buttonList: {
+    position: 'absolute',
     right: 15,
-    alignItems : 'center',
-    justifyContent : 'center',
-    borderRadius : 30,
+  },
+  mapButton: {
+    backgroundColor: colors.ORANGE_800,
+    marginVertical: 5,
+    height: 48,
+    width: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 30,
     shadowColor: colors.BLACK,
-    shadowOffset : {width:1, height:2},
+    shadowOffset: { width: 1, height: 2 },
     shadowOpacity: 0.5,
-    elevation : 2,
-  }
+    elevation: 2,
+  },
+  addButton: {
+    backgroundColor: colors.ORANGE_800,
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 20,
+    marginTop: 10,
+  },
 });
 
 export default MapHomeScreen;
